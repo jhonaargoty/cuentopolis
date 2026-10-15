@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Local environment and secrets
+.env*
+!.env.example
+.dev.vars*
+
+# Cloudflare Wrangler
+.wrangler/
+
+# Logs and test coverage
+*.log
+coverage/
+
+# OS and editor files
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
