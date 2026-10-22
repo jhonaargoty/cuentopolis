@@ -7,7 +7,7 @@ function App() {
   const [selectedStory, setSelectedStory] = useState<Story | null>(null)
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell${selectedStory ? ' app-shell--reader' : ''}`}>
       {selectedStory ? (
         <StoryReaderPage
           story={selectedStory}

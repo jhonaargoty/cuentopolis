@@ -25,13 +25,9 @@ export function StoryCover({ src, title, className = '' }: StoryCoverProps) {
           onError={() => setHasImageError(true)}
         />
       ) : null}
-      <span className="story-cover__fallback" aria-hidden="true">
-        <span className="story-cover__fallback-scene" />
-        <span className="story-cover__fallback-book">{title}</span>
-        <span className="story-cover__fallback-caption">
-          Ilustración no disponible
-        </span>
-      </span>
+      {imageUnavailable ? (
+        <span className="story-cover__fallback" aria-hidden="true" />
+      ) : null}
     </div>
   )
 }
