@@ -9,6 +9,7 @@ export const stories: Story[] = [
       'https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=900&q=80',
     content:
       'Tito encontró un mapa junto a la puerta de su casa. Una estrella roja señalaba un lugar escondido detrás de las colinas. Preparó su mochila y siguió el sendero. En el camino, una ardilla le indicó por dónde cruzar el arroyo. Al llegar a la colina, Tito descubrió un jardín lleno de flores. El verdadero tesoro era el camino que había recorrido.',
+    audioTriggers: [],
   },
   {
     id: 2,
@@ -18,6 +19,7 @@ export const stories: Story[] = [
       'https://images.unsplash.com/photo-1535591273668-578e31182c4f?auto=format&fit=crop&w=900&q=80',
     content:
       'Lola miraba a los pájaros desde la orilla del estanque. Soñaba con volar por encima de los árboles. Probó con hojas grandes a modo de alas, pero solo consiguió dar un chapuzón. Sus amigos le ofrecieron ayuda. Desde una roca alta, Lola saltó tan lejos que por un instante pareció volar. El estanque entero celebró su gran salto.',
+    audioTriggers: [],
   },
   {
     id: 3,
@@ -27,5 +29,6 @@ export const stories: Story[] = [
       'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=900&q=80',
     content:
       'Una mañana, los animales notaron que el arroyo ya no cantaba. El búho convocó a todos para buscar el origen del problema. El conejo encontró unas ramas caídas y el castor descubrió que bloqueaban el agua. Juntos comenzaron a retirarlas. Pronto el agua volvió a correr. El bosque recuperó su música y sus habitantes aprendieron cuánto podían lograr en equipo.',
+    audioTriggers: [],
   },
 ]

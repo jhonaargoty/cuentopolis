@@ -4,11 +4,17 @@ interface StoryCoverProps {
   src: string
   title: string
   className?: string
+  onLoadSettled?: () => void
 }
 
-export function StoryCover({ src, title, className = '' }: StoryCoverProps) {
-  const [hasImageError, setHasImageError] = useState(false)
-  const imageUnavailable = !src || hasImageError
+export function StoryCover({
+  src,
+  title,
+  className = '',
+  onLoadSettled,
+}: StoryCoverProps) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const imageUnavailable = !src || failedSrc === src
 
   return (
     <div
@@ -21,8 +27,15 @@ export function StoryCover({ src, title, className = '' }: StoryCoverProps) {
           className="story-cover__image"
           src={src}
           alt=""
-          loading="lazy"
-          onError={() => setHasImageError(true)}
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
+          loading="eager"
+          decoding="async"
+          onLoad={onLoadSettled}
+          onError={() => {
+            setFailedSrc(src)
+            onLoadSettled?.()
+          }}
         />
       ) : null}
       {imageUnavailable ? (

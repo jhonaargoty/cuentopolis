@@ -499,7 +499,7 @@ button {
 
 .reader-intro__backdrop {
   position: absolute;
-  z-index: -2;
+  z-index: 0;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -510,11 +510,12 @@ button {
   border-radius: 0;
   background-color: #282233;
   box-shadow: none;
+  pointer-events: none;
 }
 
 .reader-intro__shade {
   position: absolute;
-  z-index: -1;
+  z-index: 1;
   inset: 0;
   background: linear-gradient(
     180deg,
@@ -528,7 +529,7 @@ button {
 
 .reader-page--intro .reader-header {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   flex: 0 0 auto;
 }
 
@@ -577,7 +578,7 @@ button {
 
 .reader-intro {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: flex;
   width: min(100%, 760px);
   min-height: 0;
@@ -626,7 +627,7 @@ button {
 
 .reader-loading {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: grid;
   min-height: 0;
   flex: 1;
@@ -819,6 +820,76 @@ button {
   justify-content: space-between;
   gap: 16px;
   margin: 21px auto 0;
+}
+
+.voice-test {
+  width: 100%;
+  max-width: 670px;
+  margin: 0 auto 24px;
+  padding: 18px;
+  border: 1px solid #493d59;
+  border-radius: 16px;
+  background: #211b2c;
+}
+
+.voice-test__heading h2 {
+  margin: 0;
+  color: #f7f0ff;
+  font-family: var(--display-font);
+  font-size: 1.2rem;
+}
+
+.voice-test__heading > p:last-child {
+  margin: 7px 0 0;
+  color: #c6b9d8;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.voice-test__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.voice-test__controls button {
+  min-width: 132px;
+  min-height: 46px;
+}
+
+.voice-test__controls button:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.voice-test__status,
+.voice-test__transcript,
+.voice-test__error {
+  margin: 12px 0 0;
+  color: #c6b9d8;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.voice-test__transcript {
+  padding-top: 10px;
+  border-top: 1px solid rgb(217 197 245 / 15%);
+  color: #f4effb;
+}
+
+.voice-test__transcript span {
+  color: #d9c5f5;
+  font-weight: 700;
+}
+
+.voice-test__error {
+  color: #ffc4ce;
+}
+
+.voice-test audio {
+  display: none;
 }
 
 .secondary-button {
@@ -1290,6 +1361,14 @@ button {
     min-width: 0;
     flex: 1;
     padding-inline: 12px;
+  }
+
+  .voice-test {
+    padding: 15px;
+  }
+
+  .voice-test__controls button {
+    flex: 1 1 120px;
   }
 }
 

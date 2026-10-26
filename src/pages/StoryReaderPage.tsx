@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { Story } from '../types/story'
 import { StoryCover } from '../components/stories/StoryCover'
+import { StoryVoiceReader } from '../components/stories/StoryVoiceReader'
+import { getPageSounds } from '../data/storySounds'
 
 interface StoryReaderPageProps {
   story: Story
@@ -18,62 +20,25 @@ function createStoryPages(content: string): string[] {
   return pages
 }
 
-function preloadCover(src: string): Promise<void> {
-  if (!src) {
-    return Promise.resolve()
-  }
-
-  return new Promise((resolve) => {
-    const image = new Image()
-    const timeoutId = window.setTimeout(finish, 15000)
-
-    function finish() {
-      window.clearTimeout(timeoutId)
-      image.onload = null
-      image.onerror = null
-      resolve()
-    }
-
-    image.onload = finish
-    image.onerror = finish
-    image.src = src
-
-    if (image.complete) {
-      finish()
-    }
-  })
-}
-
 export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
   const [hasStarted, setHasStarted] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
   const [loadedStoryId, setLoadedStoryId] = useState<number | null>(null)
   const pages = createStoryPages(story.content)
-  const isPreparing = loadedStoryId !== story.id
+  const isPreparing = Boolean(story.cover) && loadedStoryId !== story.id
   const isFinished = pageIndex >= pages.length
   const isIntro = isPreparing || !hasStarted
   const currentPage = pages[pageIndex]
+  const currentPageSounds = currentPage
+    ? getPageSounds(story.audioTriggers, currentPage)
+    : []
   const progress = pages.length === 0 ? 0 : Math.round(((pageIndex + 1) / pages.length) * 100)
 
-  useEffect(() => {
-    let isCurrent = true
-
-    async function prepareStory() {
-      await preloadCover(story.cover)
-
-      if (isCurrent) {
-        setHasStarted(false)
-        setPageIndex(0)
-        setLoadedStoryId(story.id)
-      }
-    }
-
-    void prepareStory()
-
-    return () => {
-      isCurrent = false
-    }
-  }, [story.content, story.cover, story.id])
+  function handleCoverLoadSettled() {
+    setHasStarted(false)
+    setPageIndex(0)
+    setLoadedStoryId(story.id)
+  }
 
   return (
     <section
@@ -85,6 +50,7 @@ export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
             className="reader-intro__backdrop"
             src={story.cover}
             title={story.title}
+            onLoadSettled={handleCoverLoadSettled}
           />
           <div className="reader-intro__shade" aria-hidden="true" />
         </>
@@ -176,6 +142,7 @@ export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
                   Siguiente
                 </button>
               </nav>
+              <StoryVoiceReader sounds={currentPageSounds} />
             </>
           ) : (
             <div className="story-finished">
