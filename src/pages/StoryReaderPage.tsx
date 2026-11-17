@@ -2,57 +2,63 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Story } from '../types/story'
 import { StoryCover } from '../components/stories/StoryCover'
 import { StoryVoiceReader } from '../components/stories/StoryVoiceReader'
-import { getPageSounds } from '../data/storySounds'
-import { preloadAudio } from '../services/audioCache'
+import { createStoryPages, getStoryAudioUrls } from '../services/storyPages'
+import { preloadAudioBuffers } from '../services/audioPlayback'
+import { useStoryPreparation } from '../hooks/useStoryPreparation'
 
 interface StoryReaderPageProps {
   story: Story
   onBack: () => void
 }
 
-function createStoryPages(content: string): string[] {
-  const sentences = content.trim().match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? []
-  const pages: string[] = []
-
-  for (let index = 0; index < sentences.length; index += 2) {
-    pages.push(sentences.slice(index, index + 2).join(' ').trim())
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`
   }
 
-  return pages
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
   const [hasStarted, setHasStarted] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
-  const [loadedStoryId, setLoadedStoryId] = useState<number | null>(null)
-  const pages = useMemo(() => createStoryPages(story.content), [story.content])
-  const pageSounds = useMemo(
-    () => pages.map((page) => getPageSounds(story.audioTriggers, page)),
-    [pages, story.audioTriggers],
+  const preparation = useStoryPreparation(story)
+  const pages = useMemo(() => createStoryPages(story), [story])
+  const failedUrls = useMemo(
+    () => new Set(preparation.failedUrls),
+    [preparation.failedUrls],
   )
-  const isPreparing = Boolean(story.cover) && loadedStoryId !== story.id
   const isFinished = pageIndex >= pages.length
-  const isIntro = isPreparing || !hasStarted
+  const isIntro = !hasStarted
   const currentPage = pages[pageIndex]
-  const currentPageSounds = pageSounds[pageIndex] ?? []
-  const progress = pages.length === 0 ? 0 : Math.round(((pageIndex + 1) / pages.length) * 100)
+  const currentPageSounds = (currentPage?.resources ?? []).filter(
+    (sound) => !failedUrls.has(sound.audioUrl),
+  )
+  const progress =
+    pages.length === 0 ? 0 : Math.round(((pageIndex + 1) / pages.length) * 100)
+  const preparationProgress =
+    preparation.progress.total === 0
+      ? 100
+      : Math.round(
+          (preparation.progress.completed / preparation.progress.total) * 100,
+        )
+  const canStart = pages.length > 0 && preparation.status !== 'preparing'
+  const pageAudioUrls = useMemo(
+    () => getStoryAudioUrls(story, pages),
+    [pages, story],
+  )
 
   useEffect(() => {
-    const soundsToPreload = [
-      ...(pageSounds[pageIndex] ?? []),
-      ...(pageSounds[pageIndex + 1] ?? []),
-    ]
-
-    for (const sound of soundsToPreload) {
-      void preloadAudio(sound.audioUrl)
+    if (preparation.status !== 'ready' && preparation.status !== 'partial') {
+      return
     }
-  }, [pageIndex, pageSounds])
 
-  function handleCoverLoadSettled() {
-    setHasStarted(false)
-    setPageIndex(0)
-    setLoadedStoryId(story.id)
-  }
+    void preloadAudioBuffers(pageAudioUrls)
+  }, [pageAudioUrls, preparation.status])
 
   return (
     <section
@@ -62,9 +68,8 @@ export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
         <>
           <StoryCover
             className="reader-intro__backdrop"
-            src={story.cover}
+            src={preparation.coverUrl ?? story.cover}
             title={story.title}
-            onLoadSettled={handleCoverLoadSettled}
           />
           <div className="reader-intro__shade" aria-hidden="true" />
         </>
@@ -88,23 +93,76 @@ export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
         </div>
       ) : null}
 
-      {isPreparing ? (
-        <div className="reader-loading" role="status" aria-live="polite">
-          <span className="reader-loading__spinner" aria-hidden="true" />
-          <p>Descargando cuento...</p>
-        </div>
-      ) : !hasStarted ? (
+      {!hasStarted ? (
         <article className="reader-intro">
           <div className="reader-intro__details">
             <h1>{story.title}</h1>
             <p>{story.description}</p>
+
+            {preparation.status === 'preparing' ? (
+              <div className="reader-preparation" role="status" aria-live="polite">
+                <p>
+                  Preparando sonidos… {preparation.progress.completed} de{' '}
+                  {preparation.progress.total}
+                  {preparation.progress.loadedBytes > 0
+                    ? ` · ${formatBytes(preparation.progress.loadedBytes)}`
+                    : ''}
+                </p>
+                <div
+                  className="reader-preparation__bar"
+                  role="progressbar"
+                  aria-label="Preparación del cuento"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={preparationProgress}
+                >
+                  <span style={{ width: `${preparationProgress}%` }} />
+                </div>
+              </div>
+            ) : null}
+
+            {preparation.status === 'partial' ? (
+              <div className="reader-preparation reader-preparation--warning" role="status">
+                <p>
+                  {preparation.progress.failedCount === 1
+                    ? 'Un sonido no se pudo descargar.'
+                    : `${preparation.progress.failedCount} sonidos no se pudieron descargar.`}
+                </p>
+                <button
+                  className="quiet-button"
+                  type="button"
+                  onClick={preparation.retry}
+                >
+                  Reintentar
+                </button>
+              </div>
+            ) : null}
+
+            {preparation.status === 'error' ? (
+              <div className="reader-preparation reader-preparation--warning" role="alert">
+                <p>No pudimos preparar los sonidos del cuento.</p>
+                <button
+                  className="quiet-button"
+                  type="button"
+                  onClick={preparation.retry}
+                >
+                  Reintentar
+                </button>
+              </div>
+            ) : null}
+
             <button
               className="primary-button reader-intro__button"
               type="button"
               onClick={() => setHasStarted(true)}
-              disabled={pages.length === 0}
+              disabled={!canStart}
             >
-              Comenzar a leer <span aria-hidden="true">→</span>
+              {preparation.status === 'preparing'
+                ? 'Preparando sonidos…'
+                : preparation.status === 'error'
+                  ? 'Comenzar sin sonidos'
+                  : 'Comenzar a leer'}{' '}
+              <span aria-hidden="true">→</span>
             </button>
           </div>
         </article>
@@ -124,7 +182,7 @@ export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
             <>
               <div className="story-paper" aria-live="polite" aria-atomic="true">
                 <span className="story-paper__ornament" aria-hidden="true">❧</span>
-                <p className="story-text">{currentPage}</p>
+                <p className="story-text">{currentPage.text}</p>
                 <span className="story-paper__page-number" aria-hidden="true">
                   {pageIndex + 1}
                 </span>

@@ -2,27 +2,27 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+const pagesBasePath = process.env.VITE_BASE_PATH ?? '/cuentopolis/'
+
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? pagesBasePath : '/',
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['audio/elefante.m4a'],
+      registerType: 'prompt',
       workbox: {
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: ({ request, url }) =>
               request.destination === 'image' &&
-              url.hostname === 'lh3.googleusercontent.com',
+              (url.hostname === 'lh3.googleusercontent.com' ||
+                url.pathname.endsWith('/api/image')),
             handler: 'CacheFirst',
             options: {
               cacheName: 'cuentopolis-drive-cover-images',
               cacheableResponse: {
                 statuses: [200],
-                headers: {
-                  'content-type': 'image/jpeg',
-                },
               },
               expiration: {
                 maxEntries: 60,
@@ -61,20 +61,21 @@ export default defineConfig({
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: '/',
+        start_url: '.',
+        scope: '.',
         icons: [
           {
-            src: '/pwa-192x192.png',
+            src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
           },
           {
-            src: '/pwa-512x512.png',
+            src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      }
-    })
-  ]
-})
+            type: 'image/png',
+          },
+        ],
+      },
+    }),
+  ],
+}))

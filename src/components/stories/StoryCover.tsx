@@ -27,7 +27,6 @@ export function StoryCover({
           className="story-cover__image"
           src={src}
           alt=""
-          crossOrigin="anonymous"
           referrerPolicy="no-referrer"
           loading="eager"
           decoding="async"

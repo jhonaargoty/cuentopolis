@@ -1,25 +1,82 @@
-const audioUrlCache = new Map<string, Promise<string>>()
+const AUDIO_CACHE_NAME = 'cuentopolis-audio-v1'
+const blobCache = new Map<string, Blob>()
+const inFlightDownloads = new Map<string, Promise<Blob>>()
 
-export function preloadAudio(audioUrl: string): Promise<string> {
-  const cachedAudio = audioUrlCache.get(audioUrl)
-  if (cachedAudio) {
-    return cachedAudio
+function getCacheStorage(): CacheStorage | null {
+  if (typeof caches === 'undefined') {
+    return null
   }
 
-  const audioPromise = fetch(audioUrl)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`No se pudo descargar el audio (${response.status}).`)
-      }
+  return caches
+}
 
-      return response.blob()
-    })
-    .then((blob) => URL.createObjectURL(blob))
-    .catch(() => {
-      audioUrlCache.delete(audioUrl)
-      return audioUrl
-    })
+async function getCachedBlob(audioUrl: string): Promise<Blob | null> {
+  const cacheStorage = getCacheStorage()
+  if (!cacheStorage) {
+    return null
+  }
 
-  audioUrlCache.set(audioUrl, audioPromise)
-  return audioPromise
+  try {
+    const response = await cacheStorage.match(audioUrl)
+    return response ? response.blob() : null
+  } catch {
+    return null
+  }
+}
+
+async function storeBlob(audioUrl: string, blob: Blob): Promise<void> {
+  const cacheStorage = getCacheStorage()
+  if (!cacheStorage) {
+    return
+  }
+
+  try {
+    const cache = await cacheStorage.open(AUDIO_CACHE_NAME)
+    await cache.put(audioUrl, new Response(blob))
+  } catch {
+    // Safari en modo privado puede rechazar Cache API; seguimos con memoria.
+  }
+}
+
+export function primeAudioBlob(audioUrl: string, blob: Blob): void {
+  blobCache.set(audioUrl, blob)
+}
+
+export function getAudioBlob(audioUrl: string): Promise<Blob> {
+  const cachedBlob = blobCache.get(audioUrl)
+  if (cachedBlob) {
+    return Promise.resolve(cachedBlob)
+  }
+
+  const existingDownload = inFlightDownloads.get(audioUrl)
+  if (existingDownload) {
+    return existingDownload
+  }
+
+  const download = (async () => {
+    const cached = await getCachedBlob(audioUrl)
+    if (cached) {
+      blobCache.set(audioUrl, cached)
+      return cached
+    }
+
+    const response = await fetch(audioUrl)
+    if (!response.ok) {
+      throw new Error(`No se pudo descargar el audio (${response.status}).`)
+    }
+
+    const blob = await response.blob()
+    blobCache.set(audioUrl, blob)
+    void storeBlob(audioUrl, blob)
+    return blob
+  })().finally(() => {
+    inFlightDownloads.delete(audioUrl)
+  })
+
+  inFlightDownloads.set(audioUrl, download)
+  return download
+}
+
+export function hasAudioBlob(audioUrl: string): boolean {
+  return blobCache.has(audioUrl)
 }

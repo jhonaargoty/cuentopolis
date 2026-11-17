@@ -11,6 +11,9 @@
 		"enabled": true
 	},
 	"upload_source_maps": true,
+	"vars": {
+		"ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:5175,https://jhonaargoty.github.io"
+	},
 	"d1_databases": [
 		{
 			"binding": "cuentopolis_db",

@@ -4,6 +4,20 @@ export interface AudioTrigger {
   enabled: boolean
 }
 
+export interface PageResource {
+  word: string
+  audioUrl: string
+}
+
+export interface StoryResource extends PageResource {
+  page: number
+}
+
+export interface StoryPage {
+  text: string
+  resources: PageResource[]
+}
+
 export interface Story {
   id: number
   title: string
@@ -11,4 +25,5 @@ export interface Story {
   cover: string
   content: string
   audioTriggers: AudioTrigger[]
+  resources: StoryResource[]
 }

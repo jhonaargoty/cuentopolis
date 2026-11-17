@@ -625,6 +625,45 @@ button {
   cursor: not-allowed;
 }
 
+.reader-preparation {
+  display: grid;
+  gap: 8px;
+  max-width: 420px;
+  margin: 0 0 18px;
+  color: #f4effb;
+}
+
+.reader-preparation p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.reader-preparation--warning {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 14px;
+  background: rgb(24 14 38 / 45%);
+}
+
+.reader-preparation__bar {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 22%);
+}
+
+.reader-preparation__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #ffd166;
+  transition: width 180ms ease;
+}
+
 .reader-loading {
   position: relative;
   z-index: 2;
@@ -886,6 +925,63 @@ button {
 
 .voice-test__error {
   color: #ffc4ce;
+}
+
+.voice-test__debug {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px dashed rgb(217 197 245 / 30%);
+  border-radius: 10px;
+  color: #d9c5f5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+}
+
+.app-banner {
+  position: fixed;
+  z-index: 20;
+  right: clamp(16px, 4vw, 32px);
+  bottom: clamp(16px, 4vw, 32px);
+  left: clamp(16px, 4vw, 32px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 18px 20px;
+  border: 1px solid rgb(97 61 43 / 18%);
+  border-radius: 18px;
+  background: #fff9f0;
+  box-shadow: 0 18px 48px rgb(56 32 18 / 20%);
+  color: #3b2a21;
+}
+
+.app-banner__copy {
+  display: grid;
+  gap: 4px;
+  min-width: 220px;
+  flex: 1;
+}
+
+.app-banner__copy p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.app-banner--install {
+  border-color: rgb(97 61 43 / 26%);
+  background: #fff4e1;
+}
+
+.app-banner--update {
+  border-color: rgb(50 104 96 / 26%);
+  background: #eef8f4;
 }
 
 .voice-test audio {
