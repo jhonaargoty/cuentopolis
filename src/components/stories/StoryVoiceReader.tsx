@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PageSound } from '../../data/storySounds'
-import { textContainsWord } from '../../data/storySounds'
+import { findLastSoundInText } from '../../data/storySounds'
+import { preloadAudio } from '../../services/audioCache'
 
 interface StoryVoiceReaderProps {
   sounds: PageSound[]
@@ -79,16 +80,40 @@ export function StoryVoiceReader({ sounds }: StoryVoiceReaderProps) {
   const [recognizedText, setRecognizedText] = useState('')
   const [statusMessage, setStatusMessage] = useState('La escucha aún no ha iniciado.')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [resolvedAudio, setResolvedAudio] = useState<Record<string, string>>({})
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const shouldListenRef = useRef(false)
   const restartAttemptsRef = useRef(0)
   const restartTimerRef = useRef<number | null>(null)
   const processedResultIndexesRef = useRef<Set<number>>(new Set())
   const audioRefs = useRef<Record<string, HTMLAudioElement | null>>({})
+  const playingAudioRef = useRef<HTMLAudioElement | null>(null)
   const soundsRef = useRef(sounds)
 
   useEffect(() => {
     soundsRef.current = sounds
+  }, [sounds])
+
+  useEffect(() => {
+    let isActive = true
+
+    for (const sound of sounds) {
+      void preloadAudio(sound.audioUrl).then((resolvedUrl) => {
+        if (!isActive) {
+          return
+        }
+
+        setResolvedAudio((currentAudio) =>
+          currentAudio[sound.word] === resolvedUrl
+            ? currentAudio
+            : { ...currentAudio, [sound.word]: resolvedUrl },
+        )
+      })
+    }
+
+    return () => {
+      isActive = false
+    }
   }, [sounds])
 
   function stopListening() {
@@ -110,6 +135,17 @@ export function StoryVoiceReader({ sounds }: StoryVoiceReaderProps) {
     setStatusMessage('Escucha detenida.')
   }
 
+  function stopCurrentAudio() {
+    const currentAudio = playingAudioRef.current
+    if (!currentAudio) {
+      return
+    }
+
+    currentAudio.pause()
+    currentAudio.currentTime = 0
+    playingAudioRef.current = null
+  }
+
   function playSound(sound: PageSound) {
     const audio = audioRefs.current[sound.word]
     if (!audio) {
@@ -117,13 +153,19 @@ export function StoryVoiceReader({ sounds }: StoryVoiceReaderProps) {
       return
     }
 
+    stopCurrentAudio()
+    playingAudioRef.current = audio
     audio.currentTime = 0
     void audio.play().then(
       () => setStatusMessage(`Detecté «${sound.word}» y reproduje su sonido.`),
-      () =>
+      () => {
+        if (playingAudioRef.current === audio) {
+          playingAudioRef.current = null
+        }
         setErrorMessage(
           `Detecté «${sound.word}», pero Safari bloqueó la reproducción del audio.`,
-        ),
+        )
+      },
     )
   }
 
@@ -181,9 +223,7 @@ export function StoryVoiceReader({ sounds }: StoryVoiceReaderProps) {
         processedResultIndexesRef.current.add(index)
         restartAttemptsRef.current = 0
         const transcript = result[0]?.transcript ?? ''
-        const matchedSound = soundsRef.current.find((sound) =>
-          textContainsWord(transcript, sound.word),
-        )
+        const matchedSound = findLastSoundInText(transcript, soundsRef.current)
 
         if (matchedSound) {
           playSound(matchedSound)
@@ -263,6 +303,8 @@ export function StoryVoiceReader({ sounds }: StoryVoiceReaderProps) {
     if (restartTimerRef.current !== null) {
       window.clearTimeout(restartTimerRef.current)
     }
+    playingAudioRef.current?.pause()
+    playingAudioRef.current = null
     try {
       recognitionRef.current?.stop()
     } catch {
@@ -318,7 +360,12 @@ export function StoryVoiceReader({ sounds }: StoryVoiceReaderProps) {
           ref={(element) => {
             audioRefs.current[sound.word] = element
           }}
-          src={sound.audioUrl}
+          onEnded={() => {
+            if (playingAudioRef.current === audioRefs.current[sound.word]) {
+              playingAudioRef.current = null
+            }
+          }}
+          src={resolvedAudio[sound.word] ?? sound.audioUrl}
           preload="auto"
           playsInline
           {...{ referrerPolicy: 'no-referrer' }}

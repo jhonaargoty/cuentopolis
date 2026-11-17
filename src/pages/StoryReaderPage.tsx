@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Story } from '../types/story'
 import { StoryCover } from '../components/stories/StoryCover'
 import { StoryVoiceReader } from '../components/stories/StoryVoiceReader'
 import { getPageSounds } from '../data/storySounds'
+import { preloadAudio } from '../services/audioCache'
 
 interface StoryReaderPageProps {
   story: Story
@@ -24,15 +25,28 @@ export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
   const [hasStarted, setHasStarted] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
   const [loadedStoryId, setLoadedStoryId] = useState<number | null>(null)
-  const pages = createStoryPages(story.content)
+  const pages = useMemo(() => createStoryPages(story.content), [story.content])
+  const pageSounds = useMemo(
+    () => pages.map((page) => getPageSounds(story.audioTriggers, page)),
+    [pages, story.audioTriggers],
+  )
   const isPreparing = Boolean(story.cover) && loadedStoryId !== story.id
   const isFinished = pageIndex >= pages.length
   const isIntro = isPreparing || !hasStarted
   const currentPage = pages[pageIndex]
-  const currentPageSounds = currentPage
-    ? getPageSounds(story.audioTriggers, currentPage)
-    : []
+  const currentPageSounds = pageSounds[pageIndex] ?? []
   const progress = pages.length === 0 ? 0 : Math.round(((pageIndex + 1) / pages.length) * 100)
+
+  useEffect(() => {
+    const soundsToPreload = [
+      ...(pageSounds[pageIndex] ?? []),
+      ...(pageSounds[pageIndex + 1] ?? []),
+    ]
+
+    for (const sound of soundsToPreload) {
+      void preloadAudio(sound.audioUrl)
+    }
+  }, [pageIndex, pageSounds])
 
   function handleCoverLoadSettled() {
     setHasStarted(false)

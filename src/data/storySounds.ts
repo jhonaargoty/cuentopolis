@@ -40,3 +40,36 @@ export function getPageSounds(
       .map((word) => ({ word, audioUrl: trigger.audioUrl }))
   })
 }
+
+export function findLastSoundInText(
+  text: string,
+  sounds: PageSound[],
+): PageSound | undefined {
+  const normalizedText = normalizeWord(text)
+  let lastMatch: PageSound | undefined
+  let lastIndex = -1
+
+  for (const sound of sounds) {
+    const normalizedWord = normalizeWord(sound.word).trim()
+    if (!normalizedWord) {
+      continue
+    }
+
+    const escapedWord = normalizedWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const matcher = new RegExp(
+      `(?:^|[^\\p{L}\\p{N}_])${escapedWord}(?:$|[^\\p{L}\\p{N}_])`,
+      'gu',
+    )
+    let match = matcher.exec(normalizedText)
+
+    while (match) {
+      if (match.index > lastIndex) {
+        lastIndex = match.index
+        lastMatch = sound
+      }
+      match = matcher.exec(normalizedText)
+    }
+  }
+
+  return lastMatch
+}
