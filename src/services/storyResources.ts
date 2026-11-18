@@ -36,6 +36,7 @@ export interface StoryPreparationResult extends StoryPreparationProgress {
   cacheName: string
   coverBlob: Blob | null
   failedUrls: string[]
+  failedAudioCount: number
   fromCache: boolean
 }
 
@@ -266,6 +267,7 @@ export async function prepareStory(
   let loadedBytes = 0
   let totalBytes = 0
   let failedCount = 0
+  let failedAudioCount = 0
   let coverBlob: Blob | null = null
   const failedUrls: string[] = []
   const pendingItems: PreparationItem[] = []
@@ -330,6 +332,9 @@ export async function prepareStory(
         }
       } catch {
         failedCount += 1
+        if (item.kind === 'audio') {
+          failedAudioCount += 1
+        }
         failedUrls.push(item.url)
         completed += 1
       }
@@ -371,6 +376,7 @@ export async function prepareStory(
     totalBytes,
     failedCount,
     failedUrls,
+    failedAudioCount,
     coverBlob,
     fromCache,
   }

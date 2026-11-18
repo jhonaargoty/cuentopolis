@@ -3,7 +3,6 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
 import { StoryListPage } from './pages/StoryListPage'
 import { StoryReaderPage } from './pages/StoryReaderPage'
 import { UpdateBanner } from './components/UpdateBanner'
-import { InstallGuide } from './components/InstallGuide'
 import type { Story } from './types/story'
 
 function App() {
@@ -35,8 +34,6 @@ function App() {
       {needRefresh ? (
         <UpdateBanner isReading={Boolean(selectedStory)} onUpdate={handleUpdate} />
       ) : null}
-
-      {!selectedStory ? <InstallGuide /> : null}
     </main>
   )
 }

@@ -398,56 +398,54 @@ export function StoryVoiceReader({ sounds }: StoryVoiceReaderProps) {
     }
   }, [])
 
-  const words = sounds.map((sound) => `«${sound.word}»`).join(' o ')
+  const canStart = isSupported && sounds.length > 0
+  const isActive = isListening || isPlaying
+  const hint = errorMessage
+    ? { text: errorMessage, tone: 'error' as const }
+    : !isSupported
+      ? { text: 'Voz no soportada en este navegador.', tone: 'error' as const }
+      : null
 
   return (
-    <section className="voice-test" aria-labelledby="voice-test-title">
-      <div className="voice-test__heading">
-        <p className="eyebrow">Lectura con voz</p>
-        <h2 id="voice-test-title">
-          {sounds.length > 0 ? `Di ${words}` : 'Sin sonidos en esta página'}
-        </h2>
-        <p>
-          {sounds.length > 0
-            ? 'Puedes decirlo mientras lees: el sonido aparecerá al instante.'
-            : 'Esta página todavía no tiene palabras con sonido.'}
-        </p>
-      </div>
+    <div className="voice-bar">
+      <button
+        className={`voice-bar__toggle${isActive ? ' is-active' : ''}`}
+        type="button"
+        onClick={isActive ? stopListening : () => void handleStart()}
+        disabled={!canStart && !isActive}
+        title={
+          isActive
+            ? 'Detener la escucha'
+            : canStart
+              ? 'Activar lectura con voz'
+              : 'Esta página no tiene palabras con sonido'
+        }
+        aria-pressed={isActive}
+      >
+        <span
+          className={`voice-bar__light${isListening ? ' is-listening' : ''}${isPlaying ? ' is-playing' : ''}`}
+          aria-hidden="true"
+        />
+        <span className="voice-bar__label">
+          {isActive ? 'Escuchando' : 'Activar voz'}
+        </span>
+      </button>
 
-      <div className="voice-test__controls">
-        <button
-          className="primary-button"
-          type="button"
-          onClick={() => void handleStart()}
-          disabled={!isSupported || isListening || isPlaying || sounds.length === 0}
-        >
-          Iniciar escucha
-        </button>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={stopListening}
-          disabled={!isListening && !isPlaying}
-        >
-          Detener
-        </button>
-      </div>
+      <p
+        className={`voice-bar__hint${hint ? ` is-${hint.tone}` : ''}`}
+        role="status"
+        aria-live="polite"
+      >
+        {hint?.text ?? ''}
+      </p>
 
-      <p className="voice-test__status" role="status" aria-live="polite">
-        {isSupported ? statusMessage : 'Reconocimiento de voz no soportado en este navegador.'}
-      </p>
-      <p className="voice-test__transcript" aria-live="polite" aria-atomic="true">
-        <span>Texto reconocido:</span> {recognizedText || '—'}
-      </p>
-      {errorMessage ? <p className="voice-test__error" role="alert">{errorMessage}</p> : null}
       {debugEnabled ? (
-        <div className="voice-test__debug">
-          <span>
-            Voz → audio: {lastLatency !== null ? `${lastLatency} ms` : '—'}
-          </span>
-          <span>{isPlaying ? 'Reproduciendo' : 'En espera'}</span>
-        </div>
+        <span className="voice-bar__debug">
+          {lastLatency !== null ? `${lastLatency} ms` : '—'}
+          {recognizedText ? ` · ${recognizedText.slice(-40)}` : ''}
+          {statusMessage ? ` · ${statusMessage}` : ''}
+        </span>
       ) : null}
-    </section>
+    </div>
   )
 }

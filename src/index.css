@@ -102,16 +102,10 @@ button {
   text-decoration: none;
 }
 
-.wordmark__spark {
-  display: grid;
+.wordmark__mark {
   width: 32px;
   height: 32px;
-  place-items: center;
-  border-radius: 50% 50% 42% 58%;
-  background: var(--coral);
-  color: var(--forest-deep);
-  font-size: 1.1rem;
-  transform: rotate(-10deg);
+  border-radius: 50%;
 }
 
 .library-header__label {
@@ -694,10 +688,19 @@ button {
 }
 
 .reader-header__wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: #f4effb;
   font-family: var(--display-font);
   font-size: 1.05rem;
   font-weight: 800;
+}
+
+.reader-header__mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
 }
 
 .app-shell--reader .reader-header {
@@ -861,84 +864,91 @@ button {
   margin: 21px auto 0;
 }
 
-.voice-test {
+.voice-bar {
+  display: flex;
   width: 100%;
   max-width: 670px;
-  margin: 0 auto 24px;
-  padding: 18px;
-  border: 1px solid #493d59;
-  border-radius: 16px;
-  background: #211b2c;
-}
-
-.voice-test__heading h2 {
-  margin: 0;
-  color: #f7f0ff;
-  font-family: var(--display-font);
-  font-size: 1.2rem;
-}
-
-.voice-test__heading > p:last-child {
-  margin: 7px 0 0;
-  color: #c6b9d8;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.voice-test__controls {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
-  margin-top: 15px;
+  margin: 4px auto 20px;
 }
 
-.voice-test__controls button {
-  min-width: 132px;
-  min-height: 46px;
+.voice-bar__toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 12px 4px 9px;
+  border: 1px solid #493d59;
+  border-radius: 999px;
+  background: #211b2c;
+  color: #e8ddf6;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
 }
 
-.voice-test__controls button:disabled {
-  opacity: 0.52;
+.voice-bar__toggle:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.voice-test__status,
-.voice-test__transcript,
-.voice-test__error {
-  margin: 12px 0 0;
-  color: #c6b9d8;
-  font-size: 0.88rem;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
+.voice-bar__toggle.is-active {
+  border-color: rgb(217 197 245 / 45%);
+  background: #2a2137;
 }
 
-.voice-test__transcript {
-  padding-top: 10px;
-  border-top: 1px solid rgb(217 197 245 / 15%);
-  color: #f4effb;
+.voice-bar__light {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #665a76;
+  box-shadow: 0 0 0 0 transparent;
+  transition: background 160ms ease, box-shadow 160ms ease;
 }
 
-.voice-test__transcript span {
-  color: #d9c5f5;
-  font-weight: 700;
+.voice-bar__light.is-listening {
+  background: #8fe3c4;
+  animation: voice-bar-pulse 1.6s ease-out infinite;
 }
 
-.voice-test__error {
+.voice-bar__light.is-playing {
+  background: #ffd79a;
+  box-shadow: 0 0 10px 2px rgb(255 215 154 / 55%);
+}
+
+@keyframes voice-bar-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(143 227 196 / 55%);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgb(143 227 196 / 0%);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(143 227 196 / 0%);
+  }
+}
+
+.voice-bar__hint {
+  margin: 0;
+  overflow: hidden;
+  color: #a99bbb;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-bar__hint.is-error {
   color: #ffc4ce;
 }
 
-.voice-test__debug {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 8px 10px;
-  border: 1px dashed rgb(217 197 245 / 30%);
-  border-radius: 10px;
+.voice-bar__debug {
+  flex: 0 0 auto;
   color: #d9c5f5;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
 }
 
 .app-banner {
@@ -974,18 +984,9 @@ button {
   line-height: 1.5;
 }
 
-.app-banner--install {
-  border-color: rgb(97 61 43 / 26%);
-  background: #fff4e1;
-}
-
 .app-banner--update {
   border-color: rgb(50 104 96 / 26%);
   background: #eef8f4;
-}
-
-.voice-test audio {
-  display: none;
 }
 
 .secondary-button {
@@ -1459,12 +1460,12 @@ button {
     padding-inline: 12px;
   }
 
-  .voice-test {
-    padding: 15px;
+  .voice-bar {
+    gap: 8px;
   }
 
-  .voice-test__controls button {
-    flex: 1 1 120px;
+  .voice-bar__hint {
+    font-size: 0.72rem;
   }
 }
 

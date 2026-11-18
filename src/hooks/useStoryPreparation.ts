@@ -5,7 +5,7 @@ import {
   type StoryPreparationProgress,
 } from '../services/storyResources'
 
-export type PreparationStatus = 'preparing' | 'ready' | 'partial' | 'error'
+export type PreparationStatus = 'idle' | 'preparing' | 'ready' | 'error'
 
 export interface StoryPreparationState {
   status: PreparationStatus
@@ -22,25 +22,33 @@ const initialProgress: StoryPreparationProgress = {
   failedCount: 0,
 }
 
+const initialPreparationState: StoryPreparationState = {
+  status: 'idle',
+  progress: initialProgress,
+  failedUrls: [],
+  fromCache: false,
+}
+
 export function useStoryPreparation(story: Story) {
-  const [state, setState] = useState<StoryPreparationState>({
-    status: 'preparing',
-    progress: initialProgress,
-    failedUrls: [],
-    fromCache: false,
-  })
-  const [attempt, setAttempt] = useState(0)
+  const [state, setState] = useState<StoryPreparationState>(
+    initialPreparationState,
+  )
+  const [runId, setRunId] = useState(0)
   const [coverBlob, setCoverBlob] = useState<Blob | null>(null)
   const runIdRef = useRef(0)
 
   useEffect(() => {
-    const runId = runIdRef.current + 1
-    runIdRef.current = runId
+    if (runId === 0) {
+      return
+    }
+
+    const currentRunId = runIdRef.current + 1
+    runIdRef.current = currentRunId
     let isActive = true
 
     void prepareStory(story, {
       onProgress: (progress) => {
-        if (!isActive || runIdRef.current !== runId) {
+        if (!isActive || runIdRef.current !== currentRunId) {
           return
         }
 
@@ -51,12 +59,12 @@ export function useStoryPreparation(story: Story) {
       },
     })
       .then((result) => {
-        if (!isActive || runIdRef.current !== runId) {
+        if (!isActive || runIdRef.current !== currentRunId) {
           return
         }
 
         setState({
-          status: result.failedCount > 0 ? 'partial' : 'ready',
+          status: result.failedAudioCount > 0 ? 'error' : 'ready',
           progress: {
             completed: result.completed,
             total: result.total,
@@ -70,7 +78,7 @@ export function useStoryPreparation(story: Story) {
         setCoverBlob(result.coverBlob)
       })
       .catch(() => {
-        if (!isActive || runIdRef.current !== runId) {
+        if (!isActive || runIdRef.current !== currentRunId) {
           return
         }
 
@@ -83,17 +91,12 @@ export function useStoryPreparation(story: Story) {
     return () => {
       isActive = false
     }
-  }, [story, attempt])
+  }, [story, runId])
 
-  const retry = useCallback(() => {
-    setState({
-      status: 'preparing',
-      progress: initialProgress,
-      failedUrls: [],
-      fromCache: false,
-    })
+  const start = useCallback(() => {
+    setState({ ...initialPreparationState, status: 'preparing' })
     setCoverBlob(null)
-    setAttempt((currentAttempt) => currentAttempt + 1)
+    setRunId((currentRun) => currentRun + 1)
   }, [])
 
   const coverUrl = useMemo(
@@ -113,7 +116,8 @@ export function useStoryPreparation(story: Story) {
   return {
     ...state,
     coverUrl,
-    retry,
-    isReady: state.status === 'ready' || state.status === 'partial',
+    start,
+    retry: start,
+    isReady: state.status === 'ready',
   }
 }

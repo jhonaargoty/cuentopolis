@@ -162,7 +162,95 @@ function toStory(story: ApiStory): Story {
   }
 }
 
-export async function getStories(): Promise<Story[]> {
+interface StoriesCacheEntry {
+  savedAt: number
+  stories: Story[]
+}
+
+export const STORIES_CACHE_TTL_MS = 5 * 60 * 1000
+const STORIES_CACHE_KEY = 'cuentopolis-stories-v1'
+
+let storiesCache: StoriesCacheEntry | null = null
+let isCacheLoaded = false
+
+function isStoriesCacheEntry(value: unknown): value is StoriesCacheEntry {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const entry = value as Record<string, unknown>
+
+  return (
+    typeof entry.savedAt === 'number' &&
+    Array.isArray(entry.stories) &&
+    entry.stories.every(
+      (story) =>
+        typeof story === 'object' &&
+        story !== null &&
+        typeof (story as Record<string, unknown>).id === 'number' &&
+        typeof (story as Record<string, unknown>).title === 'string',
+    )
+  )
+}
+
+function loadStoriesCache(): StoriesCacheEntry | null {
+  if (isCacheLoaded) {
+    return storiesCache
+  }
+
+  isCacheLoaded = true
+
+  if (typeof sessionStorage === 'undefined') {
+    return null
+  }
+
+  try {
+    const rawValue = sessionStorage.getItem(STORIES_CACHE_KEY)
+    const parsedValue: unknown = rawValue ? JSON.parse(rawValue) : null
+
+    if (isStoriesCacheEntry(parsedValue)) {
+      storiesCache = parsedValue
+    }
+  } catch {
+    storiesCache = null
+  }
+
+  return storiesCache
+}
+
+function saveStoriesCache(stories: Story[]): void {
+  storiesCache = { savedAt: Date.now(), stories }
+  isCacheLoaded = true
+
+  if (typeof sessionStorage === 'undefined') {
+    return
+  }
+
+  try {
+    sessionStorage.setItem(STORIES_CACHE_KEY, JSON.stringify(storiesCache))
+  } catch {
+    // sessionStorage lleno o bloqueado: la caché en memoria sigue funcionando.
+  }
+}
+
+/** Lista guardada (aunque esté vencida), para pintar el home sin esperar la red. */
+export function getCachedStories(): Story[] | null {
+  return loadStoriesCache()?.stories ?? null
+}
+
+function isStoriesCacheFresh(entry: StoriesCacheEntry): boolean {
+  return Date.now() - entry.savedAt < STORIES_CACHE_TTL_MS
+}
+
+export async function getStories(
+  options: { force?: boolean } = {},
+): Promise<Story[]> {
+  const cached = loadStoriesCache()
+
+  if (cached && !options.force && isStoriesCacheFresh(cached)) {
+    return cached.stories
+  }
+
   const apiBaseUrl = getApiBaseUrl()
   const response = await fetch(`${apiBaseUrl}/api/stories`)
 
@@ -176,5 +264,8 @@ export async function getStories(): Promise<Story[]> {
     throw new Error('La respuesta de cuentos tiene un formato no válido.')
   }
 
-  return data.map(toStory)
+  const stories = data.map(toStory)
+  saveStoriesCache(stories)
+
+  return stories
 }

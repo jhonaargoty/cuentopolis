@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Story } from '../types/story'
 import { StoryCover } from '../components/stories/StoryCover'
 import { StoryVoiceReader } from '../components/stories/StoryVoiceReader'
+import { BrandMark } from '../components/BrandMark'
 import { createStoryPages, getStoryAudioUrls } from '../services/storyPages'
 import { preloadAudioBuffers } from '../services/audioPlayback'
 import { useStoryPreparation } from '../hooks/useStoryPreparation'
@@ -24,7 +25,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
-  const [hasStarted, setHasStarted] = useState(false)
+  const [startRequested, setStartRequested] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
   const preparation = useStoryPreparation(story)
   const pages = useMemo(() => createStoryPages(story), [story])
@@ -33,6 +34,7 @@ export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
     [preparation.failedUrls],
   )
   const isFinished = pageIndex >= pages.length
+  const hasStarted = startRequested && preparation.status === 'ready'
   const isIntro = !hasStarted
   const currentPage = pages[pageIndex]
   const currentPageSounds = (currentPage?.resources ?? []).filter(
@@ -46,19 +48,35 @@ export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
       : Math.round(
           (preparation.progress.completed / preparation.progress.total) * 100,
         )
-  const canStart = pages.length > 0 && preparation.status !== 'preparing'
+  const canStart =
+    pages.length > 0 &&
+    preparation.status !== 'preparing' &&
+    preparation.status !== 'error'
+  const isPreparing = preparation.status === 'preparing'
   const pageAudioUrls = useMemo(
     () => getStoryAudioUrls(story, pages),
     [pages, story],
   )
 
   useEffect(() => {
-    if (preparation.status !== 'ready' && preparation.status !== 'partial') {
+    if (preparation.status !== 'ready') {
       return
     }
 
     void preloadAudioBuffers(pageAudioUrls)
   }, [pageAudioUrls, preparation.status])
+
+  function handleStart() {
+    if (!canStart) {
+      return
+    }
+
+    setStartRequested(true)
+
+    if (preparation.status !== 'ready') {
+      preparation.start()
+    }
+  }
 
   return (
     <section
@@ -84,7 +102,10 @@ export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
         >
           <span aria-hidden="true">←</span>
         </button>
-        <span className="reader-header__wordmark">Cuentópolis</span>
+        <span className="reader-header__wordmark">
+          <BrandMark className="reader-header__mark" />
+          Cuentópolis
+        </span>
         <span className="reader-header__spacer" aria-hidden="true" />
       </header>
       {!isIntro ? (
@@ -121,26 +142,12 @@ export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
               </div>
             ) : null}
 
-            {preparation.status === 'partial' ? (
-              <div className="reader-preparation reader-preparation--warning" role="status">
-                <p>
-                  {preparation.progress.failedCount === 1
-                    ? 'Un sonido no se pudo descargar.'
-                    : `${preparation.progress.failedCount} sonidos no se pudieron descargar.`}
-                </p>
-                <button
-                  className="quiet-button"
-                  type="button"
-                  onClick={preparation.retry}
-                >
-                  Reintentar
-                </button>
-              </div>
-            ) : null}
-
             {preparation.status === 'error' ? (
               <div className="reader-preparation reader-preparation--warning" role="alert">
-                <p>No pudimos preparar los sonidos del cuento.</p>
+                <p>
+                  No pudimos descargar los sonidos del cuento. Revisa tu conexión e
+                  inténtalo de nuevo.
+                </p>
                 <button
                   className="quiet-button"
                   type="button"
@@ -154,14 +161,10 @@ export function StoryReaderPage({ story, onBack }: StoryReaderPageProps) {
             <button
               className="primary-button reader-intro__button"
               type="button"
-              onClick={() => setHasStarted(true)}
+              onClick={handleStart}
               disabled={!canStart}
             >
-              {preparation.status === 'preparing'
-                ? 'Preparando sonidos…'
-                : preparation.status === 'error'
-                  ? 'Comenzar sin sonidos'
-                  : 'Comenzar a leer'}{' '}
+              {isPreparing ? 'Preparando sonidos…' : 'Comenzar a leer'}{' '}
               <span aria-hidden="true">→</span>
             </button>
           </div>

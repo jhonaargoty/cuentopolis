@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { Story } from '../types/story'
-import { StoryList } from '../components/stories/StoryList'
 import { StoryCover } from '../components/stories/StoryCover'
-import { getStories } from '../services/storyService'
+import { StoryList } from '../components/stories/StoryList'
+import { BrandMark } from '../components/BrandMark'
+import { getCachedStories, getStories } from '../services/storyService'
 
 interface StoryListPageProps {
   onSelectStory: (story: Story) => void
 }
 
 export function StoryListPage({ onSelectStory }: StoryListPageProps) {
-  const [stories, setStories] = useState<Story[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [stories, setStories] = useState<Story[]>(() => getCachedStories() ?? [])
+  const [isLoading, setIsLoading] = useState(() => getCachedStories() === null)
   const [hasError, setHasError] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
 
@@ -18,17 +19,22 @@ export function StoryListPage({ onSelectStory }: StoryListPageProps) {
     let isCurrent = true
 
     async function loadStories() {
-      setIsLoading(true)
+      const cachedStories = getCachedStories()
+      setIsLoading(!cachedStories?.length)
       setHasError(false)
 
       try {
-        const loadedStories = await getStories()
+        const loadedStories = await getStories({ force: loadAttempt > 0 })
         if (isCurrent) {
           setStories(loadedStories)
         }
       } catch {
         if (isCurrent) {
-          setHasError(true)
+          if (cachedStories && cachedStories.length > 0) {
+            setStories(cachedStories)
+          } else {
+            setHasError(true)
+          }
         }
       } finally {
         if (isCurrent) {
@@ -50,7 +56,7 @@ export function StoryListPage({ onSelectStory }: StoryListPageProps) {
     <section className="page story-list-page" id="biblioteca">
       <header className="library-header">
         <a className="wordmark" href="#biblioteca" aria-label="Cuentópolis, biblioteca">
-          <span className="wordmark__spark" aria-hidden="true">✳</span>
+          <BrandMark className="wordmark__mark" />
           <span>Cuentópolis</span>
         </a>
         <span className="library-header__label">Biblioteca</span>
